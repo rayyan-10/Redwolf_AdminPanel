@@ -146,6 +146,7 @@ class ProductService {
         status: 'Draft', // Always set duplicated products as Draft
         imageUrl: product.imageUrl,
         secondImageUrl: product.secondImageUrl,
+        thirdImageUrl: product.thirdImageUrl,
         glbFileUrl: product.glbFileUrl,
         description: product.description,
         specifications: product.specifications,

@@ -5,6 +5,7 @@ import '../widgets/sidebar.dart';
 import '../widgets/footer.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
+import '../widgets/manage_category_dialog.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -478,14 +479,23 @@ class _ProductsPageState extends State<ProductsPage> {
     return SizedBox(
       height: 40,
       child: ElevatedButton(
-        onPressed: () {
+        onPressed: () async {
           if (text.contains('Add product')) {
-            context.push('/products/add').then((_) {
-              // Reload products after adding
-              if (mounted) {
-                _loadProducts(forceRefresh: true);
-              }
-            });
+            await context.push('/products/add');
+            if (!mounted) return;
+            await _loadProducts(forceRefresh: true);
+          } else if (text.contains('Manage Category')) {
+            await showDialog(
+              context: context,
+              barrierDismissible: true,
+              builder: (dialogContext) {
+                return ManageCategoryDialog(
+                  onCategoriesChanged: () {
+                    // Categories are synced with AddProductPage via CategoryService
+                  },
+                );
+              },
+            );
           }
         },
         style: ElevatedButton.styleFrom(

@@ -5,6 +5,7 @@ class Product {
   final String status;
   final String imageUrl; // Thumbnail image URL
   final String? secondImageUrl; // Second image URL
+  final String? thirdImageUrl; // Third image URL
   final String? glbFileUrl; // GLB file URL
   final String? description;
   final List<Map<String, String>>? specifications;
@@ -21,6 +22,7 @@ class Product {
     required this.status,
     required this.imageUrl,
     this.secondImageUrl,
+    this.thirdImageUrl,
     this.glbFileUrl,
     this.description,
     this.specifications,
@@ -40,6 +42,7 @@ class Product {
       status: json['status'] as String,
       imageUrl: json['image_url'] as String? ?? '',
       secondImageUrl: json['second_image_url'] as String?,
+      thirdImageUrl: json['third_image_url'] as String?,
       glbFileUrl: json['glb_file_url'] as String?,
       description: json['description'] as String?,
       specifications: json['specifications'] != null
@@ -67,6 +70,7 @@ class Product {
       'status': status,
       'image_url': imageUrl,
       if (secondImageUrl != null) 'second_image_url': secondImageUrl,
+      if (thirdImageUrl != null) 'third_image_url': thirdImageUrl,
       if (glbFileUrl != null) 'glb_file_url': glbFileUrl,
       if (description != null) 'description': description,
       if (specifications != null) 'specifications': specifications,
@@ -82,6 +86,7 @@ class Product {
     String? status,
     String? imageUrl,
     String? secondImageUrl,
+    String? thirdImageUrl,
     String? glbFileUrl,
     String? description,
     List<Map<String, String>>? specifications,
@@ -96,6 +101,7 @@ class Product {
       status: status ?? this.status,
       imageUrl: imageUrl ?? this.imageUrl,
       secondImageUrl: secondImageUrl ?? this.secondImageUrl,
+      thirdImageUrl: thirdImageUrl ?? this.thirdImageUrl,
       glbFileUrl: glbFileUrl ?? this.glbFileUrl,
       description: description ?? this.description,
       specifications: specifications ?? this.specifications,

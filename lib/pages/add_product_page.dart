@@ -9,6 +9,8 @@ import '../widgets/sidebar.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../services/supabase_service.dart';
+import '../services/category_service.dart';
+import '../widgets/manage_category_dialog.dart';
 
 class AddProductPage extends StatefulWidget {
   final Product? product;
@@ -25,9 +27,14 @@ class _AddProductPageState extends State<AddProductPage> {
   late List<Specification> _specifications;
   late List<String> _keyFeatures;
   late List<String> _selectedCategories;
-  final List<String> _availableCategories = ['Wall Mount', 'Portable', 'Touch display'];
+  late List<TextEditingController> _specLabelControllers;
+  late List<TextEditingController> _specValueControllers;
+  late List<TextEditingController> _keyFeatureControllers;
+  final CategoryService _categoryService = CategoryService();
+  List<String> _availableCategories = [];
   PlatformFile? _glbFile;
-  final List<PlatformFile?> _productImages = [null, null]; // Max 2 images
+  // Three images: [0] thumbnail, [1] second image, [2] third image
+  final List<PlatformFile?> _productImages = [null, null, null];
   bool _isEditing = false;
 
   @override
@@ -58,6 +65,35 @@ class _AddProductPageState extends State<AddProductPage> {
       _keyFeatures = ['2 years warranty'];
       _selectedCategories = [];
     }
+
+    // Create controllers for dynamic specification and key feature fields
+    _specLabelControllers = _specifications
+        .map((s) => TextEditingController(text: s.label))
+        .toList();
+    _specValueControllers = _specifications
+        .map((s) => TextEditingController(text: s.value))
+        .toList();
+    _keyFeatureControllers =
+        _keyFeatures.map((k) => TextEditingController(text: k)).toList();
+
+    // Load categories from database (with default seeding)
+    _loadCategories();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    for (final c in _specLabelControllers) {
+      c.dispose();
+    }
+    for (final c in _specValueControllers) {
+      c.dispose();
+    }
+    for (final c in _keyFeatureControllers) {
+      c.dispose();
+    }
+    super.dispose();
   }
   
   // Load images and GLB file from URLs when editing
@@ -100,6 +136,27 @@ class _AddProductPageState extends State<AddProductPage> {
         print('Error loading second image: $e');
       }
     }
+
+    // Load third image if available
+    if (product.thirdImageUrl != null &&
+        product.thirdImageUrl!.isNotEmpty &&
+        (product.thirdImageUrl!.startsWith('http://') ||
+            product.thirdImageUrl!.startsWith('https://'))) {
+      try {
+        final response = await http.get(Uri.parse(product.thirdImageUrl!));
+        if (response.statusCode == 200) {
+          setState(() {
+            _productImages[2] = PlatformFile(
+              name: 'image3.png',
+              bytes: response.bodyBytes,
+              size: response.bodyBytes.length,
+            );
+          });
+        }
+      } catch (e) {
+        print('Error loading third image: $e');
+      }
+    }
     
     // Load GLB file if available
     if (product.glbFileUrl != null && 
@@ -122,11 +179,44 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+  Future<void> _loadCategories({bool forceRefresh = false}) async {
+    try {
+      final categories =
+          await _categoryService.getCategories(forceRefresh: forceRefresh);
+      if (!mounted) return;
+
+      final names = categories.map((c) => c.name).toList();
+
+      setState(() {
+        _availableCategories = names;
+
+        // Ensure the selected category is present in the available list
+        if (_selectedCategories.isNotEmpty &&
+            !_availableCategories.contains(_selectedCategories.first)) {
+          _availableCategories.insert(0, _selectedCategories.first);
+        }
+      });
+    } catch (e) {
+      // If loading categories fails, keep any existing in-memory list
+      debugPrint('Error loading categories: $e');
+    }
+  }
+
+  Future<void> _openManageCategoryDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return ManageCategoryDialog(
+          onCategoriesChanged: () async {
+            await _loadCategories(forceRefresh: true);
+          },
+        );
+      },
+    );
+
+    // Reload categories after dialog is closed to ensure latest data
+    await _loadCategories(forceRefresh: true);
   }
 
   @override
@@ -222,10 +312,90 @@ class _AddProductPageState extends State<AddProductPage> {
       return;
     }
 
+    // Require a product description
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a product description'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_selectedCategories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select at least one category'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Require all three product images (thumbnail + image 2 + image 3)
+    final hasFirstImage = _productImages[0] != null ||
+        (_isEditing &&
+            widget.product != null &&
+            (widget.product!.imageUrl.isNotEmpty));
+    final hasSecondImage = _productImages[1] != null ||
+        (_isEditing &&
+            widget.product != null &&
+            (widget.product!.secondImageUrl?.isNotEmpty ?? false));
+    final hasThirdImage = _productImages[2] != null ||
+        (_isEditing &&
+            widget.product != null &&
+            (widget.product!.thirdImageUrl?.isNotEmpty ?? false));
+
+    if (!hasFirstImage || !hasSecondImage || !hasThirdImage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Please upload all 3 product images before saving the product'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Require GLB file
+    final hasGlbFile = _glbFile != null ||
+        (_isEditing &&
+            widget.product != null &&
+            (widget.product!.glbFileUrl?.isNotEmpty ?? false));
+
+    if (!hasGlbFile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload the 3D GLB file before saving'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Require at least one complete specification
+    final hasValidSpecification = _specifications.any(
+      (spec) =>
+          spec.label.trim().isNotEmpty && spec.value.trim().isNotEmpty,
+    );
+    if (!hasValidSpecification) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one specification'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Require at least one key feature
+    final hasValidKeyFeature =
+        _keyFeatures.any((feature) => feature.trim().isNotEmpty);
+    if (!hasValidKeyFeature) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one key feature'),
           backgroundColor: Colors.red,
         ),
       );
@@ -249,12 +419,14 @@ class _AddProductPageState extends State<AddProductPage> {
       String? thumbnailImageUrl;
       String? secondImageUrl;
       String? glbFileUrl;
+      String? thirdImageUrl;
 
       // If editing, start with existing URLs
       if (_isEditing && widget.product != null) {
         thumbnailImageUrl = widget.product!.imageUrl;
         secondImageUrl = widget.product!.secondImageUrl;
         glbFileUrl = widget.product!.glbFileUrl;
+        thirdImageUrl = widget.product!.thirdImageUrl;
       }
 
       // Upload thumbnail image (first image) if new image is selected
@@ -282,6 +454,20 @@ class _AddProductPageState extends State<AddProductPage> {
         );
         if (uploadedUrl != null) {
           secondImageUrl = uploadedUrl;
+        }
+      }
+
+      // Upload third image if new image is selected
+      if (_productImages[2] != null && _productImages[2]!.bytes != null) {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = 'image3_${timestamp}_${_productImages[2]!.name}';
+        final uploadedUrl = await supabase.uploadImage(
+          fileBytes: Uint8List.fromList(_productImages[2]!.bytes!),
+          fileName: fileName,
+          bucketName: bucketName,
+        );
+        if (uploadedUrl != null) {
+          thirdImageUrl = uploadedUrl;
         }
       }
 
@@ -321,6 +507,7 @@ class _AddProductPageState extends State<AddProductPage> {
         status: status,
         imageUrl: thumbnailImageUrl ?? '',
         secondImageUrl: secondImageUrl,
+        thirdImageUrl: thirdImageUrl,
         glbFileUrl: glbFileUrl,
         description: _descriptionController.text.trim().isEmpty 
             ? null 
@@ -483,7 +670,7 @@ class _AddProductPageState extends State<AddProductPage> {
                 ..._availableCategories.map((category) => _buildCheckbox(category)),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: _openManageCategoryDialog,
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: Size.zero,
@@ -507,7 +694,7 @@ class _AddProductPageState extends State<AddProductPage> {
                 ),
               ],
               headerAction: TextButton(
-                onPressed: () {},
+                onPressed: _openManageCategoryDialog,
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -543,6 +730,8 @@ class _AddProductPageState extends State<AddProductPage> {
                   onPressed: () {
                     setState(() {
                       _specifications.add(Specification(label: '', value: ''));
+                      _specLabelControllers.add(TextEditingController());
+                      _specValueControllers.add(TextEditingController());
                     });
                   },
                 ),
@@ -568,6 +757,7 @@ class _AddProductPageState extends State<AddProductPage> {
                   onPressed: () {
                     setState(() {
                       _keyFeatures.add('');
+                      _keyFeatureControllers.add(TextEditingController());
                     });
                   },
                 ),
@@ -670,7 +860,7 @@ class _AddProductPageState extends State<AddProductPage> {
                     ..._availableCategories.map((category) => _buildCheckbox(category)),
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed: () {},
+                  onPressed: _openManageCategoryDialog,
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
@@ -694,7 +884,7 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                   ],
                   headerAction: TextButton(
-                    onPressed: () {},
+                onPressed: _openManageCategoryDialog,
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
@@ -730,6 +920,8 @@ class _AddProductPageState extends State<AddProductPage> {
                       onPressed: () {
                         setState(() {
                           _specifications.add(Specification(label: '', value: ''));
+                      _specLabelControllers.add(TextEditingController());
+                      _specValueControllers.add(TextEditingController());
                         });
                       },
                     ),
@@ -755,6 +947,7 @@ class _AddProductPageState extends State<AddProductPage> {
                       onPressed: () {
                         setState(() {
                           _keyFeatures.add('');
+                      _keyFeatureControllers.add(TextEditingController());
                         });
                       },
                     ),
@@ -937,7 +1130,7 @@ class _AddProductPageState extends State<AddProductPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < 2; i++) ...[
+        for (int i = 0; i < 3; i++) ...[
           if (i > 0) const SizedBox(width: 12),
           SizedBox(
             width: 150,
@@ -1279,7 +1472,7 @@ class _AddProductPageState extends State<AddProductPage> {
       children: [
         Expanded(
           child: TextField(
-            controller: TextEditingController(text: spec.label),
+            controller: _specLabelControllers[index],
             decoration: InputDecoration(
               hintText: 'e.g. Dimension',
               filled: true,
@@ -1304,7 +1497,7 @@ class _AddProductPageState extends State<AddProductPage> {
         const SizedBox(width: 12),
         Expanded(
           child: TextField(
-            controller: TextEditingController(text: spec.value),
+            controller: _specValueControllers[index],
             decoration: InputDecoration(
               hintText: 'Value',
               filled: true,
@@ -1332,6 +1525,8 @@ class _AddProductPageState extends State<AddProductPage> {
           onPressed: () {
             setState(() {
               _specifications.removeAt(index);
+              _specLabelControllers.removeAt(index);
+              _specValueControllers.removeAt(index);
             });
           },
         ),
@@ -1344,7 +1539,7 @@ class _AddProductPageState extends State<AddProductPage> {
       children: [
         Expanded(
           child: TextField(
-            controller: TextEditingController(text: _keyFeatures[index]),
+            controller: _keyFeatureControllers[index],
             decoration: InputDecoration(
               hintText: index == 0 ? null : 'E.g. 4K Display',
               filled: true,
@@ -1372,6 +1567,7 @@ class _AddProductPageState extends State<AddProductPage> {
           onPressed: () {
             setState(() {
               _keyFeatures.removeAt(index);
+              _keyFeatureControllers.removeAt(index);
             });
           },
         ),
