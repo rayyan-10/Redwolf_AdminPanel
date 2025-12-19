@@ -42,31 +42,14 @@ class _AddProductPageState extends State<AddProductPage> {
     super.initState();
     _isEditing = widget.product != null;
     
-    if (_isEditing && widget.product != null) {
-      final product = widget.product!;
-      _titleController = TextEditingController(text: product.name);
-      _descriptionController = TextEditingController(text: product.description ?? '');
-      _selectedCategories = [product.category];
-      _specifications = product.specifications?.map((s) => Specification(
-        label: s['label'] ?? '',
-        value: s['value'] ?? '',
-      )).toList() ?? [Specification(label: 'Dimension', value: '10×20×5 cm')];
-      _keyFeatures = product.keyFeatures ?? [];
-      if (_keyFeatures.isEmpty) {
-        _keyFeatures = ['2 years warranty'];
-      }
-      
-      // Load images and GLB file from URLs asynchronously
-      _loadProductFiles(product);
-    } else {
-      _titleController = TextEditingController();
-      _descriptionController = TextEditingController();
-      _specifications = [Specification(label: 'Dimension', value: '10×20×5 cm')];
-      _keyFeatures = ['2 years warranty'];
-      _selectedCategories = [];
-    }
-
-    // Create controllers for dynamic specification and key feature fields
+    // Initialize with default values first
+    _titleController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _specifications = [Specification(label: 'Dimension', value: '10×20×5 cm')];
+    _keyFeatures = ['2 years warranty'];
+    _selectedCategories = [];
+    
+    // Create controllers for dynamic specification and key feature fields (will be updated after loading product)
     _specLabelControllers = _specifications
         .map((s) => TextEditingController(text: s.label))
         .toList();
@@ -78,6 +61,65 @@ class _AddProductPageState extends State<AddProductPage> {
 
     // Load categories from database (with default seeding)
     _loadCategories();
+    
+    // If editing, fetch latest product data from database
+    if (_isEditing && widget.product != null && widget.product!.id != null) {
+      _loadProductForEditing(widget.product!.id!);
+    } else if (_isEditing && widget.product != null) {
+      // Fallback to passed product if no ID (shouldn't happen, but handle gracefully)
+      _initializeWithProduct(widget.product!);
+    }
+  }
+  
+  // Fetch latest product data from database when editing
+  Future<void> _loadProductForEditing(String productId) async {
+    try {
+      final productService = ProductService();
+      final product = await productService.getProductById(productId);
+      
+      if (product != null && mounted) {
+        _initializeWithProduct(product);
+      } else if (widget.product != null && mounted) {
+        // Fallback to passed product if fetch fails
+        _initializeWithProduct(widget.product!);
+      }
+    } catch (e) {
+      print('Error loading product for editing: $e');
+      // Fallback to passed product if fetch fails
+      if (widget.product != null && mounted) {
+        _initializeWithProduct(widget.product!);
+      }
+    }
+  }
+  
+  // Initialize form fields with product data
+  void _initializeWithProduct(Product product) {
+    setState(() {
+      _titleController.text = product.name;
+      _descriptionController.text = product.description ?? '';
+      _selectedCategories = [product.category];
+      _specifications = product.specifications?.map((s) => Specification(
+        label: s['label'] ?? '',
+        value: s['value'] ?? '',
+      )).toList() ?? [Specification(label: 'Dimension', value: '10×20×5 cm')];
+      _keyFeatures = product.keyFeatures ?? [];
+      if (_keyFeatures.isEmpty) {
+        _keyFeatures = ['2 years warranty'];
+      }
+      
+      // Update controllers for dynamic fields
+      _specLabelControllers = _specifications
+          .map((s) => TextEditingController(text: s.label))
+          .toList();
+      _specValueControllers = _specifications
+          .map((s) => TextEditingController(text: s.value))
+          .toList();
+      _keyFeatureControllers =
+          _keyFeatures.map((k) => TextEditingController(text: k)).toList();
+      
+      // Load images and GLB file from URLs asynchronously
+      _loadProductFiles(product);
+    });
   }
 
   @override
@@ -276,7 +318,7 @@ class _AddProductPageState extends State<AddProductPage> {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
-            onPressed: () => context.go('/products'),
+            onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 8),
           Text(
@@ -532,16 +574,20 @@ class _AddProductPageState extends State<AddProductPage> {
 
       if (success) {
         if (mounted) {
+          // Invalidate cache to ensure fresh data
+          productService.invalidateCache();
+          // Force refresh cache before navigating
+          await productService.getProducts(forceRefresh: true);
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Product ${status.toLowerCase()} successfully!'),
               backgroundColor: Colors.green,
             ),
           );
-          // Force refresh cache before navigating
-          await productService.getProducts(forceRefresh: true);
-          // Navigate back
-          context.go('/products');
+          
+          // Navigate back using pop to trigger the .then() callback in products page
+          Navigator.of(context).pop(true);
         }
       } else {
         if (mounted) {
@@ -573,7 +619,7 @@ class _AddProductPageState extends State<AddProductPage> {
       child: ElevatedButton(
         onPressed: () {
           if (text == 'Cancel') {
-            context.go('/products');
+            Navigator.of(context).pop();
           } else if (text == 'Save Draft') {
             _saveProduct('Draft');
           } else if (text == 'Publish') {

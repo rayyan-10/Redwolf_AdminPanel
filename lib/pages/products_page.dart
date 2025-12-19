@@ -481,9 +481,11 @@ class _ProductsPageState extends State<ProductsPage> {
       child: ElevatedButton(
         onPressed: () async {
           if (text.contains('Add product')) {
-            await context.push('/products/add');
-            if (!mounted) return;
-            await _loadProducts(forceRefresh: true);
+            final result = await context.push('/products/add');
+            // Always reload products after returning from add product page
+            if (mounted) {
+              await _loadProducts(forceRefresh: true);
+            }
           } else if (text.contains('Manage Category')) {
             await showDialog(
               context: context,
@@ -817,14 +819,14 @@ class _ProductsPageState extends State<ProductsPage> {
           minWidth: 28,
           minHeight: 28,
         ),
-        onPressed: () {
+        onPressed: () async {
           // Navigate to edit page with product data
-          context.push('/products/add', extra: product).then((_) {
-            // Reload products after editing
-            if (mounted) {
-              _loadProducts(forceRefresh: true);
-            }
-          });
+          final result = await context.push('/products/add', extra: product);
+          // Always reload products after returning from edit page to ensure fresh data
+          // (result will be true if product was saved, but we refresh anyway to be safe)
+          if (mounted) {
+            await _loadProducts(forceRefresh: true);
+          }
         },
       ),
       IconButton(

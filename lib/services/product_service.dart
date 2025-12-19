@@ -174,11 +174,22 @@ class ProductService {
           .select()
           .single();
 
-      // Update cache
-      final index = _cachedProducts.indexWhere((p) => p.id == id);
-      if (index != -1 && response != null) {
-        _cachedProducts[index] = Product.fromJson(response as Map<String, dynamic>);
+      if (response == null || response.isEmpty) {
+        return false;
       }
+
+      // Update cache with fresh data from database
+      final updatedProduct = Product.fromJson(response as Map<String, dynamic>);
+      final index = _cachedProducts.indexWhere((p) => p.id == id);
+      if (index != -1) {
+        _cachedProducts[index] = updatedProduct;
+      } else {
+        // If product not in cache, add it (shouldn't happen, but handle gracefully)
+        _cachedProducts.insert(0, updatedProduct);
+      }
+      
+      // Update last fetch time to keep cache valid
+      _lastFetchTime = DateTime.now();
 
       return true;
     } catch (e) {
