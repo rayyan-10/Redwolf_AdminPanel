@@ -157,16 +157,13 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 80, vertical: 80),
-      // Standard white dialog like the design screenshot
-      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 100),
+      backgroundColor: Colors.transparent,
       child: Center(
         child: ConstrainedBox(
-          // Make the dialog narrower so it doesn't feel too wide
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 480),
           child: Container(
             decoration: BoxDecoration(
-              // Outer card is plain white, inner list card remains white as well
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -176,13 +173,13 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                 // Header
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
                     children: [
                       const Text(
                         'Manage Categories',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF111827),
                         ),
@@ -191,6 +188,11 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                       IconButton(
                         icon: const Icon(Icons.close, size: 20),
                         splashRadius: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
@@ -202,10 +204,10 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
 
                 // Content
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   child: _isLoading
                       ? const SizedBox(
-                          height: 120,
+                          height: 100,
                           child: Center(
                             child: CircularProgressIndicator(),
                           ),
@@ -225,9 +227,7 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                               ),
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
-                                  // Slightly smaller max height so the card
-                                  // looks lighter like the design
-                                  maxHeight: 260,
+                                  maxHeight: 180,
                                 ),
                                 child: SingleChildScrollView(
                                   child: Column(
@@ -271,8 +271,8 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                                                   Padding(
                                                     padding: const EdgeInsets
                                                         .symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 12,
+                                                      horizontal: 12,
+                                                      vertical: 10,
                                                     ),
                                                     child: Row(
                                                       children: [
@@ -360,12 +360,12 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                               ),
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // Inline add new category row
                             if (_isAddingNew)
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.only(bottom: 8),
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -451,12 +451,11 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
 
                 const Divider(height: 1, color: Color(0xFFE5E7EB)),
 
-                // Footer with centered Close button, rounded like design
+                // Footer with Close button, rounded like design
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
-                    // Close button aligned to the right like in the design image
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
@@ -465,8 +464,8 @@ class _ManageCategoryDialogState extends State<ManageCategoryDialog> {
                         },
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 10,
+                            horizontal: 20,
+                            vertical: 8,
                           ),
                           foregroundColor: const Color(0xFF374151),
                           backgroundColor: const Color(0xFFF3F4F6),
