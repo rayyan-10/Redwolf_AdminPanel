@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/supabase_service.dart';
 
 class Sidebar extends StatelessWidget {
   final String currentRoute;
@@ -64,8 +65,12 @@ class Sidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(24),
             child: InkWell(
-              onTap: () {
-                context.go('/login');
+              onTap: () async {
+                final supabaseService = SupabaseService();
+                await supabaseService.signOut();
+                if (context.mounted) {
+                  context.go('/login');
+                }
               },
               child: Row(
                 children: [

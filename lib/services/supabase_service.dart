@@ -84,5 +84,31 @@ class SupabaseService {
       return false;
     }
   }
+
+  // Sign in with email and password
+  Future<AuthResponse> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    return await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+  }
+
+  // Sign out
+  Future<void> signOut() async {
+    await client.auth.signOut();
+  }
+
+  // Get current user
+  User? getCurrentUser() {
+    return client.auth.currentUser;
+  }
+
+  // Check if user is authenticated
+  bool isAuthenticated() {
+    return client.auth.currentUser != null;
+  }
 }
 

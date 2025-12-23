@@ -667,3 +667,5 @@ Update UI → (Auto-updates on DB changes)
 - Real-time updates only on Dashboard page
 - Products page uses polling/refresh strategy
 
+
+
