@@ -7,6 +7,7 @@ class Product {
   final String? secondImageUrl; // Second image URL
   final String? thirdImageUrl; // Third image URL
   final String? glbFileUrl; // GLB file URL
+  final String? usdzFileUrl; // USDZ file URL (for Apple devices)
   final String? description;
   final List<Map<String, String>>? specifications;
   final List<String>? keyFeatures;
@@ -24,6 +25,7 @@ class Product {
     this.secondImageUrl,
     this.thirdImageUrl,
     this.glbFileUrl,
+    this.usdzFileUrl,
     this.description,
     this.specifications,
     this.keyFeatures,
@@ -44,6 +46,7 @@ class Product {
       secondImageUrl: json['second_image_url'] as String?,
       thirdImageUrl: json['third_image_url'] as String?,
       glbFileUrl: json['glb_file_url'] as String?,
+      usdzFileUrl: json['usdz_file_url'] as String?,
       description: json['description'] as String?,
       specifications: json['specifications'] != null
           ? List<Map<String, String>>.from(
@@ -72,6 +75,7 @@ class Product {
       if (secondImageUrl != null) 'second_image_url': secondImageUrl,
       if (thirdImageUrl != null) 'third_image_url': thirdImageUrl,
       if (glbFileUrl != null) 'glb_file_url': glbFileUrl,
+      if (usdzFileUrl != null) 'usdz_file_url': usdzFileUrl,
       if (description != null) 'description': description,
       if (specifications != null) 'specifications': specifications,
       if (keyFeatures != null) 'key_features': keyFeatures,
@@ -88,6 +92,7 @@ class Product {
     String? secondImageUrl,
     String? thirdImageUrl,
     String? glbFileUrl,
+    String? usdzFileUrl,
     String? description,
     List<Map<String, String>>? specifications,
     List<String>? keyFeatures,
@@ -103,6 +108,7 @@ class Product {
       secondImageUrl: secondImageUrl ?? this.secondImageUrl,
       thirdImageUrl: thirdImageUrl ?? this.thirdImageUrl,
       glbFileUrl: glbFileUrl ?? this.glbFileUrl,
+      usdzFileUrl: usdzFileUrl ?? this.usdzFileUrl,
       description: description ?? this.description,
       specifications: specifications ?? this.specifications,
       keyFeatures: keyFeatures ?? this.keyFeatures,

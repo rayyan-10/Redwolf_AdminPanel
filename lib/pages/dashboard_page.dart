@@ -5,6 +5,7 @@ import '../widgets/sidebar.dart';
 import '../widgets/footer.dart';
 import '../models/product.dart';
 import '../services/supabase_service.dart';
+import '../services/analytics_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,6 +17,11 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   Timer? _timer;
   final List<_DeletedProduct> _deletedProducts = [];
+  final AnalyticsService _analyticsService = AnalyticsService();
+  
+  // Analytics data
+  int _productViews = 0;
+  int _arViews = 0;
   
   // Realtime stream of products from Supabase
   final _productsStream = SupabaseService()
@@ -33,11 +39,31 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() {
           // Trigger rebuild to update time displays
         });
+        // Refresh analytics every minute
+        _loadAnalytics();
       }
     });
     
     // Listen for DELETE events to track deleted products
     _setupDeleteListener();
+    
+    // Load analytics data on init
+    _loadAnalytics();
+    
+    // Load analytics data
+    _loadAnalytics();
+  }
+
+  Future<void> _loadAnalytics() async {
+    final productViews = await _analyticsService.getProductPageViews(days: 30);
+    final arViews = await _analyticsService.getARViews(days: 30);
+    
+    if (mounted) {
+      setState(() {
+        _productViews = productViews;
+        _arViews = arViews;
+      });
+    }
   }
 
   void _setupDeleteListener() {
@@ -321,30 +347,38 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   List<Widget> _buildMetricCards(int productCount) {
+    // Format numbers with commas
+    String formatNumber(int number) {
+      return number.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      );
+    }
+
     return [
       _buildMetricCard(
         icon: Icons.inventory_2,
         title: 'Product Count',
         value: productCount.toString(),
-        trend: '+15%',
+        trend: 'Total',
         trendColor: Colors.green,
         trendIcon: Icons.trending_up,
       ),
       _buildMetricCard(
         icon: Icons.remove_red_eye,
-        title: 'AR Views',
-        value: '12,450',
-        trend: '-6%',
-        trendColor: Colors.red,
-        trendIcon: Icons.trending_down,
+        title: 'Product Views',
+        value: formatNumber(_productViews),
+        trend: 'Last 30 days',
+        trendColor: Colors.blue,
+        trendIcon: Icons.visibility,
       ),
       _buildMetricCard(
-        icon: Icons.remove_red_eye,
+        icon: Icons.view_in_ar,
         title: 'AR Views',
-        value: '12,450',
-        trend: 'Insights',
-        trendColor: Colors.green,
-        trendIcon: Icons.trending_up,
+        value: formatNumber(_arViews),
+        trend: 'Last 30 days',
+        trendColor: Colors.purple,
+        trendIcon: Icons.view_in_ar,
       ),
     ];
   }

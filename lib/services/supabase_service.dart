@@ -71,6 +71,32 @@ class SupabaseService {
     }
   }
 
+  // Upload USDZ file to Supabase Storage (for Apple devices)
+  Future<String?> uploadUsdzFile({
+    required Uint8List fileBytes,
+    required String fileName,
+    required String bucketName,
+  }) async {
+    try {
+      final path = 'products/usdz/$fileName';
+      await client.storage.from(bucketName).uploadBinary(
+        path,
+        fileBytes,
+        fileOptions: const FileOptions(
+          contentType: 'model/vnd.usdz+zip',
+          upsert: true,
+        ),
+      );
+
+      // Get public URL
+      final url = client.storage.from(bucketName).getPublicUrl(path);
+      return url;
+    } catch (e) {
+      print('Error uploading USDZ file: $e');
+      return null;
+    }
+  }
+
   // Delete file from Supabase Storage
   Future<bool> deleteFile({
     required String filePath,

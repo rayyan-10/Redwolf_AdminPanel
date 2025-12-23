@@ -33,6 +33,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final CategoryService _categoryService = CategoryService();
   List<String> _availableCategories = [];
   PlatformFile? _glbFile;
+  PlatformFile? _usdzFile;
   // Three images: [0] thumbnail, [1] second image, [2] third image
   final List<PlatformFile?> _productImages = [null, null, null];
   bool _isEditing = false;
@@ -217,6 +218,26 @@ class _AddProductPageState extends State<AddProductPage> {
         }
       } catch (e) {
         print('Error loading GLB file: $e');
+      }
+    }
+    
+    // Load USDZ file if available
+    if (product.usdzFileUrl != null && 
+        product.usdzFileUrl!.isNotEmpty &&
+        (product.usdzFileUrl!.startsWith('http://') || product.usdzFileUrl!.startsWith('https://'))) {
+      try {
+        final response = await http.get(Uri.parse(product.usdzFileUrl!));
+        if (response.statusCode == 200) {
+          setState(() {
+            _usdzFile = PlatformFile(
+              name: 'model.usdz',
+              bytes: response.bodyBytes,
+              size: response.bodyBytes.length,
+            );
+          });
+        }
+      } catch (e) {
+        print('Error loading USDZ file: $e');
       }
     }
   }
@@ -461,6 +482,7 @@ class _AddProductPageState extends State<AddProductPage> {
       String? thumbnailImageUrl;
       String? secondImageUrl;
       String? glbFileUrl;
+      String? usdzFileUrl;
       String? thirdImageUrl;
 
       // If editing, start with existing URLs
@@ -468,6 +490,7 @@ class _AddProductPageState extends State<AddProductPage> {
         thumbnailImageUrl = widget.product!.imageUrl;
         secondImageUrl = widget.product!.secondImageUrl;
         glbFileUrl = widget.product!.glbFileUrl;
+        usdzFileUrl = widget.product!.usdzFileUrl;
         thirdImageUrl = widget.product!.thirdImageUrl;
       }
 
@@ -527,6 +550,20 @@ class _AddProductPageState extends State<AddProductPage> {
         }
       }
 
+      // Upload USDZ file if new file is selected (optional, for Apple devices)
+      if (_usdzFile != null && _usdzFile!.bytes != null) {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = 'model_${timestamp}_${_usdzFile!.name}';
+        final uploadedUrl = await supabase.uploadUsdzFile(
+          fileBytes: Uint8List.fromList(_usdzFile!.bytes!),
+          fileName: fileName,
+          bucketName: bucketName,
+        );
+        if (uploadedUrl != null) {
+          usdzFileUrl = uploadedUrl;
+        }
+      }
+
       // Use default placeholder if no thumbnail available
       if (thumbnailImageUrl == null || thumbnailImageUrl.isEmpty) {
         thumbnailImageUrl = 'assets/images/image_1.png';
@@ -551,6 +588,7 @@ class _AddProductPageState extends State<AddProductPage> {
         secondImageUrl: secondImageUrl,
         thirdImageUrl: thirdImageUrl,
         glbFileUrl: glbFileUrl,
+        usdzFileUrl: usdzFileUrl,
         description: _descriptionController.text.trim().isEmpty 
             ? null 
             : _descriptionController.text.trim(),
@@ -705,6 +743,17 @@ class _AddProductPageState extends State<AddProductPage> {
                 ),
                 const SizedBox(height: 12),
                 _buildGlbUploadBox(),
+                const SizedBox(height: 24),
+                const Text(
+                  '3D Model for AR - Apple Devices (.usdz only)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildUsdzUploadBox(),
               ],
             ),
             const SizedBox(height: 24),
@@ -886,6 +935,17 @@ class _AddProductPageState extends State<AddProductPage> {
                     ),
                     const SizedBox(height: 12),
                     _buildGlbUploadBox(),
+                    const SizedBox(height: 24),
+                    const Text(
+                      '3D Model for AR - Apple Devices (.usdz only)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildUsdzUploadBox(),
                   ],
                 ),
               ],
@@ -1662,6 +1722,155 @@ class _AddProductPageState extends State<AddProductPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildUsdzUploadBox() {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFD1D5DB),
+          style: BorderStyle.solid,
+          width: 2,
+        ),
+      ),
+      child: _getUsdzFileUrl() == null
+          ? InkWell(
+              onTap: _pickUsdzFile,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.view_in_ar, size: 32, color: const Color(0xFF9CA3AF)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Upload USDZ Model (Optional)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'only .usdz files (for Apple devices)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Stack(
+              children: [
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle, size: 48, color: Colors.green),
+                        SizedBox(height: 8),
+                        Text(
+                          'USDZ file selected',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _usdzFile = null;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  String? _getUsdzFileUrl() {
+    if (_usdzFile == null) return null;
+    
+    // On web, path is unavailable, so check bytes first
+    if (_usdzFile!.bytes != null) {
+      // For web, convert bytes to data URL with correct MIME type
+      final base64 = base64Encode(_usdzFile!.bytes!);
+      return 'data:model/vnd.usdz+zip;base64,$base64';
+    }
+    // For desktop/mobile, try to use path (but don't access it if it might throw)
+    try {
+      if (_usdzFile!.path != null && _usdzFile!.path!.isNotEmpty) {
+        return _usdzFile!.path;
+      }
+    } catch (e) {
+      // On web, accessing path throws, so we ignore it
+    }
+    return null;
+  }
+
+  Future<void> _pickUsdzFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['usdz'],
+        withData: true,
+      );
+
+      if (result != null) {
+        final file = result.files.single;
+        // On web, path is unavailable and accessing it throws
+        // So we check bytes first (which works on all platforms)
+        bool hasValidFile = false;
+        if (file.bytes != null) {
+          hasValidFile = true;
+        } else {
+          try {
+            if (file.path != null && file.path!.isNotEmpty) {
+              hasValidFile = true;
+            }
+          } catch (e) {
+            // On web, accessing path throws, so we ignore it
+          }
+        }
+        
+        if (hasValidFile) {
+          setState(() {
+            _usdzFile = file;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking USDZ file: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
