@@ -25,8 +25,38 @@ void main() async {
   runApp(const MyApp());
 }
 
+// Helper class to listen to auth state changes
+class _AuthState extends ChangeNotifier {
+  _AuthState() {
+    SupabaseService().client.auth.onAuthStateChange.listen((data) {
+      notifyListeners();
+    });
+  }
+}
+
+final _authState = _AuthState();
+
 final GoRouter _router = GoRouter(
   initialLocation: '/login',
+  refreshListenable: _authState,
+  redirect: (BuildContext context, GoRouterState state) {
+    final supabaseService = SupabaseService();
+    final isAuthenticated = supabaseService.isAuthenticated();
+    final isLoginRoute = state.matchedLocation == '/login';
+    
+    // If not authenticated and trying to access protected route, redirect to login
+    if (!isAuthenticated && !isLoginRoute) {
+      return '/login';
+    }
+    
+    // If authenticated and on login page, redirect to dashboard
+    if (isAuthenticated && isLoginRoute) {
+      return '/dashboard';
+    }
+    
+    // No redirect needed
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/login',
