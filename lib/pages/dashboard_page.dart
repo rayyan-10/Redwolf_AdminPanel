@@ -129,11 +129,28 @@ class _DashboardPageState extends State<DashboardPage> {
         
         return Scaffold(
           backgroundColor: const Color(0xFFF9FAFB),
-          body: Row(
+          body: Stack(
             children: [
-              const Sidebar(currentRoute: '/dashboard'),
-              Expanded(
-                child: _buildContent(context),
+              Row(
+                children: [
+                  const Sidebar(currentRoute: '/dashboard'),
+                  Expanded(
+                    child: _buildContent(context),
+                  ),
+                ],
+              ),
+              // Top-left logo
+              Positioned(
+                top: 24,
+                left: 24,
+                child: Image.asset(
+                  'assets/images/image.png',
+                  height: 60,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ],
           ),
@@ -157,7 +174,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     const Text(
                       'Dashboard',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF111827),
                       ),
@@ -286,7 +303,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   const Text(
                                     'Recent Activity',
                                     style: TextStyle(
-                                      fontSize: 20,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF111827),
                                     ),
@@ -711,15 +728,12 @@ Widget _buildLogo() {
   return Align(
     alignment: Alignment.centerLeft,
     child: Image.asset(
-      'assets/images/image.png',
+        'assets/images/image.png',
       height: 60,
       fit: BoxFit.contain,
       alignment: Alignment.centerLeft,
       errorBuilder: (context, error, stackTrace) {
-        return const SizedBox(
-          height: 60,
-          child: Icon(Icons.image, color: Color(0xFFDC2626)),
-        );
+        return const SizedBox(height: 60);
       },
     ),
   );

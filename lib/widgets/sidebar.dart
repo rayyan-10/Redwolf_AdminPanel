@@ -2,13 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/supabase_service.dart';
 
-class Sidebar extends StatelessWidget {
+class Sidebar extends StatefulWidget {
   final String currentRoute;
 
   const Sidebar({
     super.key,
     required this.currentRoute,
   });
+
+  @override
+  State<Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<Sidebar> {
+  bool _isDashboardHovered = false;
+  bool _isProductsHovered = false;
+  bool _isLogoutHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +57,13 @@ class Sidebar extends StatelessWidget {
                   icon: Icons.dashboard_outlined,
                   label: 'Dashboard',
                   route: '/dashboard',
-                  isActive: currentRoute == '/dashboard',
+                  isActive: widget.currentRoute == '/dashboard',
+                  isHovered: _isDashboardHovered,
+                  onHover: (value) {
+                    setState(() {
+                      _isDashboardHovered = value;
+                    });
+                  },
                 ),
                 const SizedBox(height: 8),
                 _buildNavItem(
@@ -56,7 +71,13 @@ class Sidebar extends StatelessWidget {
                   icon: Icons.inventory_2_outlined,
                   label: 'Products',
                   route: '/products',
-                  isActive: currentRoute == '/products',
+                  isActive: widget.currentRoute == '/products',
+                  isHovered: _isProductsHovered,
+                  onHover: (value) {
+                    setState(() {
+                      _isProductsHovered = value;
+                    });
+                  },
                 ),
               ],
             ),
@@ -64,31 +85,54 @@ class Sidebar extends StatelessWidget {
           // Logout
           Padding(
             padding: const EdgeInsets.all(24),
-            child: InkWell(
-              onTap: () async {
-                final supabaseService = SupabaseService();
-                await supabaseService.signOut();
-                if (context.mounted) {
-                  context.go('/login');
-                }
+            child: MouseRegion(
+              onEnter: (_) {
+                setState(() {
+                  _isLogoutHovered = true;
+                });
               },
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.arrow_forward,
-                    color: Color(0xFFDC2626),
-                    size: 20,
+              onExit: (_) {
+                setState(() {
+                  _isLogoutHovered = false;
+                });
+              },
+              cursor: SystemMouseCursors.click,
+              child: InkWell(
+                onTap: () async {
+                  final supabaseService = SupabaseService();
+                  await supabaseService.signOut();
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _isLogoutHovered
+                        ? const Color(0xFFDC2626).withValues(alpha: 0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Logout',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFFDC2626),
-                    ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.arrow_forward,
+                        color: Color(0xFFDC2626),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -103,35 +147,73 @@ class Sidebar extends StatelessWidget {
     required String label,
     required String route,
     required bool isActive,
+    required bool isHovered,
+    required ValueChanged<bool> onHover,
   }) {
-    return InkWell(
-      onTap: () {
-        context.go(route);
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFDC2626).withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isActive ? const Color(0xFFDC2626) : const Color(0xFF374151),
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: isActive ? const Color(0xFFDC2626) : const Color(0xFF374151),
+    Color getBackgroundColor() {
+      if (isActive) {
+        return const Color(0xFFDC2626).withValues(alpha: 0.1);
+      }
+      if (isHovered) {
+        return const Color(0xFFF3F4F6);
+      }
+      return Colors.transparent;
+    }
+
+    Color getIconColor() {
+      if (isActive) {
+        return const Color(0xFFDC2626);
+      }
+      if (isHovered) {
+        return const Color(0xFFDC2626);
+      }
+      return const Color(0xFF374151);
+    }
+
+    Color getTextColor() {
+      if (isActive) {
+        return const Color(0xFFDC2626);
+      }
+      if (isHovered) {
+        return const Color(0xFFDC2626);
+      }
+      return const Color(0xFF374151);
+    }
+
+    return MouseRegion(
+      onEnter: (_) => onHover(true),
+      onExit: (_) => onHover(false),
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: () {
+          context.go(route);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: getBackgroundColor(),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: getIconColor(),
+                size: 20,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: getTextColor(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -145,12 +227,9 @@ class Sidebar extends StatelessWidget {
         height: 60,
         fit: BoxFit.contain,
         alignment: Alignment.centerLeft,
-        errorBuilder: (context, error, stackTrace) {
-          return const SizedBox(
-            height: 60,
-            child: Icon(Icons.image, color: Color(0xFFDC2626)),
-          );
-        },
+      errorBuilder: (context, error, stackTrace) {
+        return const SizedBox(height: 60);
+      },
       ),
     );
   }

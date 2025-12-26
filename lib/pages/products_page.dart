@@ -187,11 +187,28 @@ class _ProductsPageState extends State<ProductsPage> {
         
         return Scaffold(
           backgroundColor: const Color(0xFFF9FAFB),
-          body: Row(
+          body: Stack(
             children: [
-              const Sidebar(currentRoute: '/products'),
-              Expanded(
-                child: _buildContent(context, constraints),
+              Row(
+                children: [
+                  const Sidebar(currentRoute: '/products'),
+                  Expanded(
+                    child: _buildContent(context, constraints),
+                  ),
+                ],
+              ),
+              // Top-left logo
+              Positioned(
+                top: 24,
+                left: 24,
+                child: Image.asset(
+                  'assets/images/image.png',
+                  height: 60,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ],
           ),
@@ -259,7 +276,7 @@ class _ProductsPageState extends State<ProductsPage> {
           const Text(
             'Products',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Color(0xFF111827),
             ),
@@ -321,7 +338,7 @@ class _ProductsPageState extends State<ProductsPage> {
                   const Text(
                     'Products',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF111827),
                     ),
@@ -385,7 +402,7 @@ class _ProductsPageState extends State<ProductsPage> {
             const Text(
               'Products',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF111827),
               ),
@@ -908,60 +925,154 @@ class _ProductsPageState extends State<ProductsPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Product'),
-          content: Text('Are you sure you want to delete "${product.name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (product.id == null) {
-                  Navigator.of(context).pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Error: Product ID not found'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                  return;
-                }
-
-                final success = await _productService.deleteProduct(product.id!);
-                Navigator.of(context).pop();
-                
-                if (success) {
-                  // Reload products from database
-                  await _loadProducts(forceRefresh: true);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Product deleted successfully'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } else {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Error deleting product'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('Delete'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Delete Product',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        splashRadius: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Are you sure you want to delete "${product.name}"?',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                // Footer with buttons
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          foregroundColor: const Color(0xFF374151),
+                          backgroundColor: const Color(0xFFF3F4F6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: () async {
+                          if (product.id == null) {
+                            Navigator.of(context).pop();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error: Product ID not found'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          final success = await _productService.deleteProduct(product.id!);
+                          Navigator.of(context).pop();
+                          
+                          if (success) {
+                            // Reload products from database
+                            await _loadProducts(forceRefresh: true);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Product deleted successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } else {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error deleting product'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFFDC2626),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+            ),
+          ),
         );
       },
     );
@@ -1068,15 +1179,12 @@ Widget _buildLogo() {
   return Align(
     alignment: Alignment.centerLeft,
     child: Image.asset(
-      'assets/images/image.png',
+        'assets/images/image.png',
       height: 60,
       fit: BoxFit.contain,
       alignment: Alignment.centerLeft,
       errorBuilder: (context, error, stackTrace) {
-        return const SizedBox(
-          height: 60,
-          child: Icon(Icons.image, color: Color(0xFFDC2626)),
-        );
+        return const SizedBox(height: 60);
       },
     ),
   );

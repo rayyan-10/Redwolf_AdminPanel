@@ -1,11 +1,11 @@
 {
-    "name": "redwolf",
-    "short_name": "redwolf",
+    "name": "REDWOLF MEDIA",
+    "short_name": "REDWOLF",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "REDWOLF MEDIA - Product Management System",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

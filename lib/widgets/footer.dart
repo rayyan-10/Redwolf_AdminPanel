@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Footer extends StatelessWidget {
   const Footer({super.key});
+
+  Future<void> _launchRuditechUrl() async {
+    final Uri url = Uri.parse('https://ruditech.com/');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +28,7 @@ class Footer extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           TextButton(
-            onPressed: () {},
+            onPressed: _launchRuditechUrl,
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               minimumSize: Size.zero,
