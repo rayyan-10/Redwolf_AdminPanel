@@ -227,38 +227,34 @@ class _ProductsPageState extends State<ProductsPage> {
         _buildHeader(context, constraints),
         // Products Table - scrollable content below header
         Expanded(
-          child: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: isTablet ? 16 : 24,
-                    right: isTablet ? 16 : 24,
-                    top: 20,
-                    bottom: 100,
-                  ),
-                  child: _isLoading && _allProducts.isEmpty
-                      ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-                          ),
-                          padding: const EdgeInsets.all(40.0),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      : _buildProductsTable(constraints, filteredProducts),
-                ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: isTablet ? 16 : 24,
+                right: isTablet ? 16 : 24,
+                top: 20,
+                bottom: 24,
               ),
-              const Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Footer(),
-              ),
-            ],
+              child: _isLoading && _allProducts.isEmpty
+                  ? Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                      ),
+                      padding: const EdgeInsets.all(40.0),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        _buildProductsTable(constraints, filteredProducts),
+                        const SizedBox(height: 24),
+                        const Footer(),
+                      ],
+                    ),
+            ),
           ),
         ),
       ],
