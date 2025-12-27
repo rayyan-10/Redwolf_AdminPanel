@@ -53,7 +53,7 @@ class AnalyticsService {
   /// Get product page views count for the last N days
   Future<int> getProductPageViews({int days = 30}) async {
     try {
-      final startDate = DateTime.now().subtract(Duration(days: days));
+      final startDate = DateTime.now().toUtc().subtract(Duration(days: days));
       final response = await _client
           .from('analytics')
           .select('id')
@@ -80,7 +80,7 @@ class AnalyticsService {
   /// Get AR views count for the last N days
   Future<int> getARViews({int days = 30}) async {
     try {
-      final startDate = DateTime.now().subtract(Duration(days: days));
+      final startDate = DateTime.now().toUtc().subtract(Duration(days: days));
       final response = await _client
           .from('analytics')
           .select('id')

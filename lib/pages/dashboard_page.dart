@@ -19,16 +19,36 @@ class _DashboardPageState extends State<DashboardPage> {
   final List<_DeletedProduct> _deletedProducts = [];
   final AnalyticsService _analyticsService = AnalyticsService();
   
-  // Analytics data
-  int _productViews = 0;
-  int _arViews = 0;
-  
   // Realtime stream of products from Supabase
   final _productsStream = SupabaseService()
       .client
       .from('products')
       .stream(primaryKey: ['id'])
       .order('created_at', ascending: false);
+  
+  // Analytics stream - uses periodic refresh with AnalyticsService methods
+  Stream<Map<String, int>> _analyticsStream() async* {
+    try {
+      // Emit immediately
+      yield await _loadAnalyticsData();
+      
+      // Then emit every 5 seconds
+      await for (final _ in Stream.periodic(const Duration(seconds: 5))) {
+        yield await _loadAnalyticsData();
+      }
+    } catch (e) {
+      yield {'productViews': 0, 'arViews': 0};
+    }
+  }
+  
+  Future<Map<String, int>> _loadAnalyticsData() async {
+    final productViews = await _analyticsService.getProductPageViews(days: 30);
+    final arViews = await _analyticsService.getARViews(days: 30);
+    return {
+      'productViews': productViews,
+      'arViews': arViews,
+    };
+  }
 
   @override
   void initState() {
@@ -39,33 +59,14 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() {
           // Trigger rebuild to update time displays
         });
-        // Refresh analytics every minute
-        _loadAnalytics();
       }
     });
     
     // Listen for DELETE events to track deleted products
     _setupDeleteListener();
-    
-    // Load analytics data on init
-    _loadAnalytics();
-    
-    // Load analytics data
-    _loadAnalytics();
   }
-
-  Future<void> _loadAnalytics() async {
-    final productViews = await _analyticsService.getProductPageViews(days: 30);
-    final arViews = await _analyticsService.getARViews(days: 30);
-    
-    if (mounted) {
-      setState(() {
-        _productViews = productViews;
-        _arViews = arViews;
-      });
-    }
-  }
-
+  
+  
   void _setupDeleteListener() {
     final channel = SupabaseService().client
         .channel('products_changes')
@@ -183,53 +184,68 @@ class _DashboardPageState extends State<DashboardPage> {
                     // Metric Cards - Static, uses stream data but doesn't shift layout
                     StreamBuilder<List<Map<String, dynamic>>>(
                       stream: _productsStream,
-                      builder: (context, snapshot) {
-                        final products = snapshot.data != null
-                            ? snapshot.data!
+                      builder: (context, productsSnapshot) {
+                        final products = productsSnapshot.data != null
+                            ? productsSnapshot.data!
                                 .map((row) => Product.fromJson(row))
                                 .toList()
                             : <Product>[];
                         final productCount = products.length;
                         
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isMobile = constraints.maxWidth < 768;
-                            final isTablet = constraints.maxWidth < 1024;
-
-                            final cards = _buildMetricCards(productCount);
-
-                            if (isMobile) {
-                              return Column(children: cards);
-                            } else if (isTablet) {
-                              return GridView.count(
-                                crossAxisCount: 2,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 2.5,
-                                children: cards,
-                              );
-                            } else {
-                              return Row(
-                                children: cards
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                      final index = entry.key;
-                                      final card = entry.value;
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            right: index < cards.length - 1 ? 16 : 0,
-                                          ),
-                                          child: card,
-                                        ),
-                                      );
-                                    })
-                                    .toList(),
-                              );
+                        // Combine products stream with analytics stream for real-time updates
+                        return StreamBuilder<Map<String, int>>(
+                          stream: _analyticsStream(),
+                          builder: (context, analyticsSnapshot) {
+                            // Handle stream errors
+                            if (analyticsSnapshot.hasError) {
+                              print('Analytics stream error: ${analyticsSnapshot.error}');
                             }
+                            
+                            final counts = analyticsSnapshot.data ?? {'productViews': 0, 'arViews': 0};
+                            final productViews = counts['productViews'] ?? 0;
+                            final arViews = counts['arViews'] ?? 0;
+                            
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isMobile = constraints.maxWidth < 768;
+                                final isTablet = constraints.maxWidth < 1024;
+
+                                final cards = _buildMetricCards(productCount, productViews, arViews);
+
+                                if (isMobile) {
+                                  return Column(children: cards);
+                                } else if (isTablet) {
+                                  return GridView.count(
+                                    crossAxisCount: 2,
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                    childAspectRatio: 2.5,
+                                    children: cards,
+                                  );
+                                } else {
+                                  return Row(
+                                    children: cards
+                                        .asMap()
+                                        .entries
+                                        .map((entry) {
+                                          final index = entry.key;
+                                          final card = entry.value;
+                                          return Expanded(
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                right: index < cards.length - 1 ? 16 : 0,
+                                              ),
+                                              child: card,
+                                            ),
+                                          );
+                                        })
+                                        .toList(),
+                                  );
+                                }
+                              },
+                            );
                           },
                         );
                       },
@@ -363,7 +379,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  List<Widget> _buildMetricCards(int productCount) {
+  List<Widget> _buildMetricCards(int productCount, int productViews, int arViews) {
     // Format numbers with commas
     String formatNumber(int number) {
       return number.toString().replaceAllMapped(
@@ -384,7 +400,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _buildMetricCard(
         icon: Icons.remove_red_eye,
         title: 'Product Views',
-        value: formatNumber(_productViews),
+        value: formatNumber(productViews),
         trend: 'Last 30 days',
         trendColor: Colors.blue,
         trendIcon: Icons.visibility,
@@ -392,7 +408,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _buildMetricCard(
         icon: Icons.view_in_ar,
         title: 'AR Views',
-        value: formatNumber(_arViews),
+        value: formatNumber(arViews),
         trend: 'Last 30 days',
         trendColor: Colors.purple,
         trendIcon: Icons.view_in_ar,
